@@ -1,21 +1,9 @@
 #!/bin/bash
 
-function build {
-    local tool=$1
-    echo "Building ${tool}..."
-    if [ -d "source/${tool}" ]; then
-        docker build -t sens/${tool}:latest -f source/${tool}/Dockerfile source/${tool}/
-    else
-        echo "Error: Tool ${tool} not found in source/"
-        exit 1
-    fi
-}
+# Build script for the consolidated triage image
 
-if [ "$1" ]; then
-    build "$1"
-else
-    for dir in source/*/; do
-        tool=$(basename "$dir")
-        build "$tool"
-    done
-fi
+set -e
+
+echo "Building sens/triage:latest..."
+docker build -t sens/triage:latest -f source/triage/Dockerfile source/triage/
+echo "Build complete!"

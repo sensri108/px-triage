@@ -1,27 +1,24 @@
 # PX_TRIAGE
 
-PX-TRIAGE is a containerized portworx troubleshooting tools.
+PX-TRIAGE is a containerized portworx troubleshooting tools. All tools are now consolidated into a single image for ease of use.
 
 ## Getting Started
 
-To build the docker images, clone this repo and run the build script. Docker must be running on your system.
+To build the docker image, clone this repo and run the build script. Docker must be running on your system.
 
-### Build All Tools
+### Build the Triage Image
 ```bash
 ./bin/build
 ```
 
-### Build a Specific Tool
-```bash
-./bin/build etcdctl
-```
-
 ## Available Tools
-1. etcdctl
-2. fio
-3. ioping
-4. iostat
-5. mpstat
+The single `sens/triage` image contains the following tools:
+- `etcdctl`
+- `fio`
+- `ioping`
+- `iostat`
+- `mpstat`
+- `sed`
 
 ## Repository Structure
 See [docs/architecture.md](docs/architecture.md) for a detailed overview of the project structure.
@@ -29,68 +26,26 @@ See [docs/architecture.md](docs/architecture.md) for a detailed overview of the 
 ## EXAMPLES:
 
 ### ETCDCTL Commands:
-docker run --rm -e ETCDCTL_API=3 sens/etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" member list -w table
-
-docker run --rm -e ETCDCTL_API=3 sens/etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" cluster-health
-
-docker run --rm -e ETCDCTL_API=3 sens/etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" check perf
-
-docker run --rm -e ETCDCTL_API=3 sens/etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" endpoint health -w table
-
-docker run --rm -e ETCDCTL_API=3 sens/etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" defrag
-
-docker run --rm -e ETCDCTL_API=3 sens/etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" get --prefix pwx/<cluster-id>/cluster
-
-docker run --rm -e ETCDCTL_API=3 sens/etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" get --prefix pwx/<cluster-id>/storage/volumes
+```bash
+docker run --rm -e ETCDCTL_API=3 sens/triage etcdctl --endpoints "http://x.x.x.x1:9019,http://x.x.x.x2:9019,http://x.x.x.x3:9019" member list -w table
+```
 
 ### FIO Commands:
+```bash
+docker run --rm -it -v myvol:/mnt sens/triage fio --blocksize=64k --filename=/mnt/fio.dat --ioengine=libaio --readwrite=write --size=10G --name=test --direct=1 --iodepth=128 --end_fsync=1
+```
 
-https://docs.portworx.com/operations/operate-other/performance-and-tuning/fio/
+### IOPING Commands:
+```bash
+docker run --rm -it -v myvol:/mnt sens/triage ioping -D /mnt
+```
 
+### IOSTAT Commands:
+```bash
+docker run --rm sens/triage iostat -xm 1
+```
 
-Benchmarking HowTo
-
-Step 1: Before installing Portworx, benchmark all the disk drives using hdparm or dd. This is the upper bound of all measurements from here on.
-
-Step 2: Install Portworx and get a baseline run. Stop Portworx and mount the disk drive(s) on a mountpoint on the host. Run Fio benchmark using this mountpoint as the target.
-
-Step 3: Verify results. Make sure the IOs are hitting the disk by looking at iostat(1) command. Make sure there are no reads when running write test and vice versa. Compare with results from Step1.
-
-Step 4: Start Portworx, create a volume. Run Fio benchmark with the same options as the baseline using the attached Portworx device as target.
-
-Step 5: Verify results, repeat Step3. Also compare with results from Step2.
-Note the following Results: * Total runtime. * Throughput and IOPS. * Latency (Completion time per request): 90/95th percentile clat.
-
-Fio Options:
-
-* ioengine: Linux native asynchronous IO engine (libaio).
-
-* blocksize: This is the Block size used for each IO operation and varies from application to application.
-
-* readwrite: IO pattern (read/write sequential/random).
-
-* size: This is the dataset size. Ideally should be greater than the size of host cache to avoid any caching effects.
-
-* direct: Set to true for non-buffered IO. This implies files are opened with O_DIRECT flag which results in IOs bypassing host cache.
-
-* iodepth: This is the number of outstanding/queued IO requests in the system. A higher number typically means greater concurrecy and better resource utilization.
-
-* end_fsync: This causes flushing of dirty data to disk at the end of test. The flush time is included in the measurement.
-Additional factors to consider when running a write test: * Do not overwrite. Reusing the same target in repeated tests will end up measuring overwrites instead of appending writes. * Do not include any verify options. Verification will introduce reads in the test.
-
-Example:
-docker run --rm -it -v myvol:/mnt sens/fio --blocksize=64k --filename=/mnt/fio.dat --ioengine=libaio --readwrite=write --size=10G --name=test --direct=1 --iodepth=128 --end_fsync=1
-
-Additional Factors to consider when running a read test: * Every read test should be preceded by a dataset population step. * Before starting the test make sure the cache is purged, to prevent cache reads. * Use the option --readonly to direct fio to perform read on existing dataset.
-
-Example:
-docker run --rm -it -v myvol:/mnt sens/fio  --blocksize=64k --filename=/mnt/fio.dat --ioengine=libaio --readwrite=read --size=10G --name=test --direct=1 --iodepth=128 --readonly
-
-Note: With basic FIO benchmarking, the goal is to find the max capacity of the system. To achieve that, refrain from introducing any limiting constraints. For example, introducing “fsync” after every write IO is not meant to push system to maximum resource utilization. While it’s a valid test, it does not return a correct measurement of the system’s sustained IO rate capabilities. Note that this does not mean we are (incorrectly) measuring memory writes. All writes generated by the test must hit the disk before the test completion. The goal is to measure sustained IO rate in a steady state. This means ideally we should exclude ramp-up and teardown time from the measurement interval.
-
-Other Example:
-
-docker run --rm -it -v myvol:/mnt sens/fio --blocksize=64k --filename=/mnt/c3 --directory=/mnt/ --ioengine=libaio --readwrite=randrw --size=1G --name=test --end_fsync=1 --gtod_reduce=1 --iodepth=32 --randrepeat=1
-docker run --rm -it -v myvol:/mnt sens/fio --blocksize=64k -fsync=0 --ioengine=libaio --iodepth=1 --direct=1 --size=100M --rw=write --filename=/px/a --loops=100000
-
-
+### MPSTAT Commands:
+```bash
+docker run --rm sens/triage mpstat -xm 1
+```

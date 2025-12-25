@@ -1,24 +1,29 @@
 # Repository Architecture
 
-The `px-triage` repository is organized to follow a domain-driven structure, making it easy to manage multiple containerized tools.
+The `px-triage` repository is organized to manage a consolidated containerized troubleshooting tool called `triage`.
 
 ## Structure
 
 ```
 px-triage/
 ├── bin/                # Executable scripts
-│   └── build           # Universal build script
+│   └── build           # Build script for the triage image
 ├── docs/               # Extended documentation
 │   └── architecture.md # This file
-├── source/             # Tool-specific source code
-│   ├── etcdctl/
-│   │   └── Dockerfile
-│   ├── fio/
-│   │   └── Dockerfile
-│   ├── ...
+├── source/             # Tool source code
+│   └── triage/         # Consolidated tool logic
+│       └── Dockerfile  # Single Dockerfile for all tools
 └── README.md           # Project entry point and examples
 ```
 
 ## Build System
-The `bin/build` script iterates through the `source/` directory and builds Docker images for each tool found.
-Usage: `./bin/build [tool_name]`
+The `bin/build` script builds the `sens/triage` image which contains all the troubleshooting tools.
+Usage: `./bin/build`
+
+## Included Tools
+- `etcdctl`: ETCD client for cluster state inspection.
+- `fio`: Flexible I/O tester for storage benchmarking.
+- `ioping`: Real-time disk latency monitoring.
+- `iostat`: CPU and I/O statistics.
+- `mpstat`: Processor related statistics.
+- `sed`: Stream editor for text processing.
