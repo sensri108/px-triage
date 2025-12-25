@@ -1,12 +1,30 @@
 # PX_TRIAGE
 
-PX-TRIAGE is a containerized portworx troubleshooting tools. To build the docker image, just clone this repo and run the build bash scripts. Note: Docker should be running where ever you are this build script. 
+PX-TRIAGE is a containerized portworx troubleshooting tools.
 
+## Getting Started
+
+To build the docker images, clone this repo and run the build script. Docker must be running on your system.
+
+### Build All Tools
+```bash
+./bin/build
+```
+
+### Build a Specific Tool
+```bash
+./bin/build etcdctl
+```
+
+## Available Tools
 1. etcdctl
 2. fio
 3. ioping
 4. iostat
 5. mpstat
+
+## Repository Structure
+See [docs/architecture.md](docs/architecture.md) for a detailed overview of the project structure.
 
 ## EXAMPLES:
 
